@@ -1,5 +1,6 @@
 # Morph-SVG-GSAP-animation-
 Source Code for morph svg animation with only js
+Star the repo if you loved it..
 
 MorphSVG lets you smoothly transform one SVG shape into another. Even if the shapes have different numbers of points or structures, MorphSVG makes the animation look natural and seamless. This is perfect for creating dynamic effects like logos changing form, animated icons, or illustrations that come alive.
 
