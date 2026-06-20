@@ -1,0 +1,344 @@
+	<!DOCTYPE html>
+	<html lang="en">
+	<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<title>Interactive 3D SVG Morph</title>
+	<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;600;700&display=swap" rel="stylesheet">
+	<style>
+	  * { box-sizing: border-box; margin: 0; padding: 0; }
+	  body {
+	    min-height: 100vh;
+	    background: radial-gradient(circle at 50% 50%, #0a0d26 0%, #02030a 100%);
+	    display: flex;
+	    flex-direction: column;
+	    align-items: center;
+	    justify-content: center;
+	    font-family: 'Space Grotesk', sans-serif;
+	    overflow: hidden;
+	    perspective: 1200px; /* Required for 3D effect */
+	  }
+	  /* Animated Background Grid */
+	  .grid-bg {
+	    position: absolute;
+	    inset: -50%;
+	    background-image: 
+	      linear-gradient(rgba(99, 102, 241, 0.05) 1px, transparent 1px),
+	      linear-gradient(90deg, rgba(99, 102, 241, 0.05) 1px, transparent 1px);
+	    background-size: 40px 40px;
+	    transform: perspective(500px) rotateX(60deg) translateY(-100px) translateZ(-200px);
+	    animation: gridMove 20s linear infinite;
+	    pointer-events: none;
+	    z-index: 0;
+	  }
+	  @keyframes gridMove {
+	    0% { transform: perspective(500px) rotateX(60deg) translateY(0) translateZ(-200px); }
+	    100% { transform: perspective(500px) rotateX(60deg) translateY(40px) translateZ(-200px); }
+	  }
+	  /* 3D Glassmorphism Container */
+	  .glow-box {
+	    position: relative;
+	    border: 1px solid rgba(99, 102, 241, 0.3);
+	    border-radius: 24px;
+	    background: rgba(10, 12, 35, 0.4);
+	    backdrop-filter: blur(12px);
+	    box-shadow: 0 0 40px rgba(99, 102, 241, 0.1), inset 0 0 20px rgba(99, 102, 241, 0.1);
+	    transform-style: preserve-3d; /* Allows children to pop out */
+	    transition: transform 0.1s ease-out;
+	    z-index: 10;
+	  }
+	  .scene {
+	    position: relative;
+	    width: min(520px, 90vw);
+	    height: min(520px, 90vw);
+	    display: flex;
+	    align-items: center;
+	    justify-content: center;
+	    transform-style: preserve-3d;
+	  }
+	  .particles { position: absolute; inset: 0; pointer-events: none; transform: translateZ(20px); }
+	  .particle { position: absolute; border-radius: 50%; opacity: 0; filter: blur(1px); }
+	  .ring-container {
+	    position: absolute; inset: 0;
+	    display: flex; align-items: center; justify-content: center;
+	    pointer-events: none;
+	    transform: translateZ(10px);
+	  }
+	  .ring { position: absolute; border-radius: 50%; border: 1px solid transparent; }
+	  /* Floating SVG element */
+	  .morph-svg {
+	    width: min(220px, 45vw);
+	    height: min(220px, 45vw);
+	    position: relative;
+	    z-index: 5;
+	    filter: drop-shadow(0 0 30px rgba(99,102,241,0.8));
+	    transform: translateZ(60px); /* Pops out in 3D */
+	  }
+	  .label {
+	    position: absolute;
+	    font-size: clamp(1.4rem, 4vw, 2.2rem);
+	    font-weight: 700;
+	    letter-spacing: 6px;
+	    text-transform: uppercase;
+	    pointer-events: none;
+	    z-index: 6;
+	    transform: translateZ(80px); /* Text floats highest */
+	    text-shadow: 0 4px 20px rgba(0,0,0,0.5);
+	  }
+	  .lbl-left {
+	    left: clamp(10px, 4%, 25px); top: 50%; transform: translateY(-50%) translateZ(80px);
+	    background: linear-gradient(135deg, #c7d2fe, #6366f1);
+	    -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+	  }
+	  .lbl-right {
+	    right: clamp(10px, 4%, 25px); top: 50%; transform: translateY(-50%) translateZ(80px);
+	    background: linear-gradient(135deg, #c7d2fe, #6366f1);
+	    -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+	  }
+	  .lbl-top {
+	    top: clamp(15px, 5%, 40px); left: 50%; transform: translateX(-50%) translateZ(80px);
+	    background: linear-gradient(135deg, #f5d0fe, #d946ef);
+	    -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+	    opacity: 0;
+	  }
+	  .lbl-bottom {
+	    bottom: clamp(15px, 5%, 40px); left: 50%; transform: translateX(-50%) translateZ(80px);
+	    background: linear-gradient(135deg, #f5d0fe, #d946ef);
+	    -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+	    opacity: 0;
+	  }
+	  .corner { position: absolute; width: 24px; height: 24px; opacity: 0.8; transform: translateZ(30px); }
+	  .corner-tl { top: -2px; left: -2px; border-top: 3px solid #6366f1; border-left: 3px solid #6366f1; border-radius: 16px 0 0 0; }
+	  .corner-tr { top: -2px; right: -2px; border-top: 3px solid #6366f1; border-right: 3px solid #6366f1; border-radius: 0 16px 0 0; }
+	  .corner-bl { bottom: -2px; left: -2px; border-bottom: 3px solid #6366f1; border-left: 3px solid #6366f1; border-radius: 0 0 0 16px; }
+	  .corner-br { bottom: -2px; right: -2px; border-bottom: 3px solid #6366f1; border-right: 3px solid #6366f1; border-radius: 0 0 16px 0; }
+	  .scanlines {
+	    position: absolute; inset: 0;
+	    background: repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(99,102,241,0.05) 2px, rgba(99,102,241,0.05) 4px);
+	    pointer-events: none; border-radius: 24px;
+	  }
+	  .tagline {
+	    margin-top: 40px;
+	    font-size: clamp(0.7rem, 2vw, 0.9rem);
+	    letter-spacing: 6px;
+	    text-transform: uppercase;
+	    color: rgba(165,180,252,0.6);
+	    font-weight: 600;
+	    z-index: 10;
+	    text-shadow: 0 0 10px rgba(165,180,252,0.3);
+	  }
+	</style>
+	</head>
+	<body>
+	<div class="grid-bg"></div>
+	<div class="glow-box" id="tilt-box">
+	  <div class="scene">
+	    <div class="scanlines"></div>
+	    <div class="corner corner-tl"></div>
+	    <div class="corner corner-tr"></div>
+	    <div class="corner corner-bl"></div>
+	    <div class="corner corner-br"></div>
+	    <div class="ring-container">
+	      <div class="ring" id="ring1" style="width:300px;height:300px;border-color:rgba(99,102,241,0.2);"></div>
+	      <div class="ring" id="ring2" style="width:380px;height:380px;border-color:rgba(99,102,241,0.1);"></div>
+	      <div class="ring" id="ring3" style="width:460px;height:460px;border-color:rgba(99,102,241,0.05);"></div>
+	    </div>
+	    <div class="particles" id="particles"></div>
+	    <div class="label lbl-left" id="lblLeft">Dream</div>
+	    <div class="label lbl-right" id="lblRight">Big</div>
+	    <div class="label lbl-top" id="lblTop">Work</div>
+	    <div class="label lbl-bottom" id="lblBottom">Hard</div>
+	    <svg class="morph-svg" viewBox="0 0 100 100">
+	      <defs>
+	        <linearGradient id="strokeGrad1" x1="0%" y1="0%" x2="100%" y2="100%">
+	          <stop offset="0%" stop-color="#818cf8"/>
+	          <stop offset="100%" stop-color="#4f46e5"/>
+	        </linearGradient>
+	        <linearGradient id="strokeGrad2" x1="0%" y1="0%" x2="100%" y2="100%">
+	          <stop offset="0%" stop-color="#f0abfc"/>
+	          <stop offset="100%" stop-color="#c026d3"/>
+	        </linearGradient>
+	        <filter id="glow1">
+	          <feGaussianBlur stdDeviation="3" result="blur"/>
+	          <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+	        </filter>
+	      </defs>
+	      <circle id="glowCircle" cx="50" cy="50" r="38" fill="rgba(99,102,241,0.1)" stroke="none"/>
+	      <path id="ghostShape"
+	        d="M 20,20 L 50,20 L 80,20 L 80,50 L 80,80 L 50,80 L 20,80 L 20,50 Z"
+	        fill="none" stroke="rgba(99,102,241,0.2)" stroke-width="1" stroke-dasharray="2,4"/>
+	      <path id="morphOuter"
+	        d="M 20,20 L 50,20 L 80,20 L 80,50 L 80,80 L 50,80 L 20,80 L 20,50 Z"
+	        fill="none" stroke="url(#strokeGrad1)" stroke-width="2.5"
+	        stroke-linecap="round" stroke-linejoin="round"
+	        filter="url(#glow1)" opacity="0.9"/>
+	      <path id="morphInner"
+	        d="M 24,24 L 50,24 L 76,24 L 76,50 L 76,76 L 50,76 L 24,76 L 24,50 Z"
+	        fill="none" stroke="url(#strokeGrad1)" stroke-width="1"
+	        stroke-linecap="round" stroke-linejoin="round" opacity="0.5"/>
+	      <circle class="vtx" cx="20" cy="20" r="2.5" fill="#fff" filter="drop-shadow(0 0 2px #fff)"/>
+	      <circle class="vtx" cx="80" cy="20" r="2.5" fill="#fff" filter="drop-shadow(0 0 2px #fff)"/>
+	      <circle class="vtx" cx="80" cy="80" r="2.5" fill="#fff" filter="drop-shadow(0 0 2px #fff)"/>
+	      <circle class="vtx" cx="20" cy="80" r="2.5" fill="#fff" filter="drop-shadow(0 0 2px #fff)"/>
+	    </svg>
+	  </div>
+	</div>
+	<div class="tagline">Create · Transform · Elevate</div>
+	<script src="https://cdnjs.cloudflare.com/ajax/libs/animejs/3.2.1/anime.min.js"></script>
+	<script>
+	  // 3D Tilt Logic
+	  const box = document.getElementById('tilt-box');
+	  document.addEventListener('mousemove', (e) => {
+	    const xAxis = (window.innerWidth / 2 - e.pageX) / 25;
+	    const yAxis = (window.innerHeight / 2 - e.pageY) / 25;
+	    box.style.transform = `rotateY(${xAxis}deg) rotateX(${yAxis}deg)`;
+	  });
+	  // Reset tilt on mouse leave
+	  document.addEventListener('mouseleave', () => {
+	    box.style.transform = `rotateY(0deg) rotateX(0deg)`;
+	    box.style.transition = 'transform 0.5s ease-out';
+	  });
+	  document.addEventListener('mouseenter', () => {
+	    box.style.transition = 'transform 0.1s ease-out';
+	  });
+	  // Animation Logic
+	  const squarePath  = "M 20,20 L 50,20 L 80,20 L 80,50 L 80,80 L 50,80 L 20,80 L 20,50 Z";
+	  const starPath    = "M 50,5 L 65,35 L 95,50 L 65,65 L 50,95 L 35,65 L 5,50 L 35,35 Z";
+	  const squareInner = "M 24,24 L 50,24 L 76,24 L 76,50 L 76,76 L 50,76 L 24,76 L 24,50 Z";
+	  const starInner   = "M 50,9 L 62,36 L 91,50 L 62,64 L 50,91 L 38,64 L 9,50 L 38,36 Z";
+	  const vtxSquare = [{cx:20,cy:20},{cx:80,cy:20},{cx:80,cy:80},{cx:20,cy:80}];
+	  const vtxStar   = [{cx:50,cy:5},{cx:95,cy:50},{cx:50,cy:95},{cx:5,cy:50}];
+	  const container = document.getElementById('particles');
+	  const NUM_P = 30;
+	  const pEls = [];
+	  const pColors = ["#818cf8","#4f46e5","#d946ef","#f0abfc","#c084fc","#38bdf8", "#ffffff"];
+	  for (let i = 0; i < NUM_P; i++) {
+	    const p = document.createElement('div');
+	    p.className = 'particle';
+	    const size = Math.random() * 6 + 2;
+	    p.style.cssText = `width:${size}px;height:${size}px;background:${pColors[Math.floor(Math.random()*pColors.length)]};left:${Math.random()*100}%;top:${Math.random()*100}%;opacity:0; box-shadow: 0 0 ${size*2}px ${pColors[Math.floor(Math.random()*pColors.length)]};`;
+	    container.appendChild(p);
+	    pEls.push(p);
+	  }
+	  pEls.forEach(p => {
+	    anime({
+	      targets: p,
+	      opacity: [0, Math.random() * 0.8 + 0.2, 0],
+	      translateX: () => anime.random(-60, 60),
+	      translateY: () => anime.random(-60, 60),
+	      scale: [0, Math.random() * 1.5 + 0.5, 0],
+	      duration: anime.random(2000, 4000),
+	      delay: anime.random(0, 2000),
+	      loop: true,
+	      easing: 'easeInOutSine',
+	      direction: 'alternate'
+	    });
+	  });
+	  [1,2,3].forEach((n, i) => {
+	    anime({
+	      targets: `#ring${n}`,
+	      scale: [1, 1.08, 1],
+	      opacity: [0.8, 1, 0.8],
+	      duration: 3000 + i * 800,
+	      delay: i * 300,
+	      loop: true,
+	      easing: 'easeInOutSine'
+	    });
+	  });
+	  function updateVtx(progress) {
+	    const vtxDots = document.querySelectorAll('.vtx');
+	    vtxDots.forEach((dot, i) => {
+	      const sq = vtxSquare[i], st = vtxStar[i];
+	      dot.setAttribute('cx', sq.cx + (st.cx - sq.cx) * progress);
+	      dot.setAttribute('cy', sq.cy + (st.cy - sq.cy) * progress);
+	    });
+	  }
+	  function updateGlow(progress) {
+	    const r = Math.round(99 + (217 - 99) * progress);
+	    const g = Math.round(102 + (70 - 102) * progress);
+	    const b = Math.round(241 + (239 - 241) * progress);
+	    document.getElementById('glowCircle').setAttribute('fill', `rgba(${r},${g},${b},0.15)`);
+	  }
+	  function runCycle(forward) {
+	    const tl = anime.timeline({
+	      easing: 'spring(1, 80, 10, 0)', // Swapped to spring easing for a snappier "pop"
+	      complete: () => setTimeout(() => runCycle(!forward), 1200) // Increased pause so user can admire it
+	    });
+	    const fromOuter = forward ? squarePath : starPath;
+	    const toOuter   = forward ? starPath   : squarePath;
+	    const fromInner = forward ? squareInner : starInner;
+	    const toInner   = forward ? starInner   : squareInner;
+	    tl.add({
+	      targets: '#morphOuter',
+	      d: [{ value: fromOuter }, { value: toOuter }],
+	      stroke: forward ? '#d946ef' : '#4f46e5',
+	      duration: 1800,
+	      update: anim => {
+	        const p = anim.progress / 100;
+	        updateVtx(forward ? p : 1-p);
+	        updateGlow(forward ? p : 1-p);
+	      }
+	    }, 0);
+	    tl.add({
+	      targets: '#morphInner',
+	      d: [{ value: fromInner }, { value: toInner }],
+	      stroke: forward ? '#f0abfc' : '#818cf8',
+	      duration: 1800
+	    }, 0);
+	    tl.add({
+	      targets: '#ghostShape',
+	      d: [{ value: fromOuter }, { value: toOuter }],
+	      duration: 1800
+	    }, 50);
+	    tl.add({
+	      targets: '.morph-svg',
+	      rotateZ: forward ? 180 : 0,
+	      duration: 2000,
+	      easing: 'easeOutElastic(1, .6)'
+	    }, 0);
+	    tl.add({
+	      targets: '.morph-svg',
+	      filter: forward
+	        ? ['drop-shadow(0 0 30px rgba(99,102,241,0.8))', 'drop-shadow(0 0 60px rgba(217,70,239,1))', 'drop-shadow(0 0 40px rgba(217,70,239,0.8))']
+	        : ['drop-shadow(0 0 40px rgba(217,70,239,0.8))', 'drop-shadow(0 0 60px rgba(99,102,241,1))', 'drop-shadow(0 0 30px rgba(99,102,241,0.8))'],
+	      duration: 1800,
+	      easing: 'linear'
+	    }, 0);
+	    tl.add({
+	      targets: ['#lblLeft','#lblRight'],
+	      opacity: forward ? [1,0] : [0,1],
+	      translateX: el => forward ? (el.id==='lblLeft' ? [0,-40] : [0,40]) : (el.id==='lblLeft' ? [-40,0] : [40,0]),
+	      translateZ: 80,
+	      scale: forward ? [1,0.8] : [0.8,1],
+	      duration: 800,
+	      easing: 'easeOutBack'
+	    }, 0);
+	    tl.add({
+	      targets: ['#lblTop','#lblBottom'],
+	      opacity: forward ? [0,1] : [1,0],
+	      translateY: el => forward ? (el.id==='lblTop' ? [30,0] : [-30,0]) : (el.id==='lblTop' ? [0,30] : [0,-30]),
+	      translateZ: 80,
+	      scale: forward ? [0.8,1] : [1,0.8],
+	      duration: 800,
+	      easing: 'easeOutBack'
+	    }, 200);
+	    tl.add({
+	      targets: pEls.slice(0, 12),
+	      opacity: [0, 1, 0],
+	      translateX: () => anime.random(-100, 100),
+	      translateY: () => anime.random(-100, 100),
+	      scale: [0.1, 2, 0.1],
+	      duration: 1200,
+	      easing: 'easeOutExpo',
+	      delay: anime.stagger(20)
+	    }, 200);
+	  }
+	  const entrance = anime.timeline({ easing: 'easeOutElastic(1, 1)' });
+	  entrance.add({ targets: '.glow-box', opacity: [0,1], scale: [0.8,1], duration: 1200 }, 0);
+	  entrance.add({ targets: ['#lblLeft','#lblRight'], opacity: [0,1], translateX: el => [el.id==='lblLeft'?-40:40, 0], translateZ: 80, duration: 1000 }, 200);
+	  entrance.add({ targets: '.corner', opacity: [0,0.8], scale: [0.2,1], delay: anime.stagger(100), duration: 800 }, 400);
+	  entrance.add({ targets: '.tagline', opacity: [0,1], translateY: [20,0], duration: 800 }, 800);
+	  entrance.finished.then(() => setTimeout(() => runCycle(true), 800));
+	</script>
+	</body>
+	</html>
